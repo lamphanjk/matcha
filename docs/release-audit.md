@@ -1,4 +1,4 @@
-# Matcha v0.1.0-rc.2: phạm vi thay đổi
+# Matcha v0.1.0-rc.3: phạm vi thay đổi
 
 Đối chiếu với commit `ba359123e3dd537ade3197b01a53390a73207bac` của bản fork.
 Đây là bản thử nghiệm, chưa xác nhận tích hợp trên site Frappe/ERPNext v15 thật.
@@ -68,6 +68,7 @@ python3 scripts/audit_release.py
 node scripts/audit_reconciliation.mjs
 python3 -m unittest discover -s tests -v
 node --test tests/test_settings_requests.mjs
+node --test tests/test_currency_format.mjs
 ```
 
 Hai script audit so sánh với commit baseline cố định.
@@ -76,6 +77,7 @@ Các unit test dùng Frappe giả lập, không thay thế kiểm thử database
 
 Lần kiểm tra phát hành này có 14 unit test đạt yêu cầu.
 Có thêm ba kiểm thử Desk script cho HTTP method và xử lý lỗi tải metadata trong Settings.
+Có sáu kiểm thử định dạng tiền. Tổng cộng có 23 kiểm thử đạt yêu cầu.
 Frontend build thành công bằng dependency từ `frontend/package-lock.json`, với Vite 6.4.1.
 Lockfile không thay đổi so với baseline.
 `npm audit --omit=dev` không báo lỗ hổng ở dependency production tại thời điểm kiểm tra.
@@ -91,6 +93,17 @@ Traceback production chỉ ra lỗi tại bước `is_valid_http_method`, trư�
 Đã xử lý rejection của từng loại Invoice và lỗi khi refresh form.
 Không thay đổi quyền đọc, schema, hoặc hàm xử lý chứng từ trong bản vá này.
 Các unit test dùng mô phỏng request contract v15, chưa thay thế kiểm tra lại trên server production.
+
+## Bản vá rc.3 cho dấu phân cách tiền
+
+Formatter cũ cố định locale `en-IN`, nên hiển thị `VND 10,00,00,000.00` theo nhóm chữ số Ấn Độ.
+Đã đổi sang `en-US` để hiển thị `VND 100,000,000` với nhóm ba chữ số.
+VND bỏ phần lẻ bằng không và giữ tối đa hai chữ số lẻ thực tế.
+USD và các tiền tệ khác vẫn hiển thị hai chữ số lẻ.
+Ký hiệu tiền và vị trí ký hiệu vẫn dùng cấu hình hiện có.
+Định dạng này cố định dấu phẩy hàng nghìn và dấu chấm thập phân, chưa lấy Number Format của site.
+Các hàm `roundCurrency`, `toCents`, `fromCents` và `invoiceOutstanding` giống baseline.
+Đã thêm đối chiếu AST cho bốn hàm này trong script audit frontend.
 
 ## Điều kiện trước khi dùng trên production
 

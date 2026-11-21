@@ -16,12 +16,12 @@ export function fromCents(c) {
 }
 
 export function fmt(n, currency, currencySymbols, currencySymbolOnRight) {
+  const cur = typeof currency === 'string' ? currency : '';
   const num = Math.abs(roundCurrency(Number(n)));
-  const numStr = (isFinite(num) ? num : 0).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
+  const numStr = (isFinite(num) ? num : 0).toLocaleString('en-US', {
+    minimumFractionDigits: cur === 'VND' ? 0 : 2,
     maximumFractionDigits: 2,
   });
-  const cur = typeof currency === 'string' ? currency : '';
   const syms = currencySymbols || window.matcha_currency_symbols || {};
   const onRightMap = currencySymbolOnRight || window.matcha_currency_symbol_on_right || {};
   const sym = cur && syms[cur] ? syms[cur] : cur;

@@ -41,3 +41,14 @@ if (changed.some(name => !['loadExceptions', 'changeDateFilter'].includes(name))
 console.log(`PASS: changed store functions: ${changed.join(', ')}`);
 console.log(`PASS: ${[...before.keys()].filter(name => before.get(name) === after.get(name)).length} store functions match the baseline`);
 console.log('Allocation, reconciliation, undo and exception-to-reconcile handlers are unchanged.');
+
+const formatPath = 'frontend/src/lib/format.js';
+const exportedFunctions = source => new Map(parse(source).program.body
+  .filter(node => node.type === 'ExportNamedDeclaration' && node.declaration?.type === 'FunctionDeclaration')
+  .map(node => [node.declaration.id.name, serialize(node.declaration)]));
+const oldFormat = exportedFunctions(execFileSync('git', ['show', `${baseline}:${formatPath}`], { cwd: root, encoding: 'utf8' }));
+const newFormat = exportedFunctions(readFileSync(new URL('../' + formatPath, import.meta.url), 'utf8'));
+for (const name of ['roundCurrency', 'toCents', 'fromCents', 'invoiceOutstanding']) {
+  if (oldFormat.get(name) !== newFormat.get(name)) throw new Error(`Amount calculation changed: ${name}`);
+}
+console.log('PASS: amount rounding, conversions and invoice outstanding helpers match the baseline.');

@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.1.0-rc.3
+
+Fix currency digit grouping. Python app version: `0.1.0rc3`.
+
+- Replace hardcoded Indian digit grouping with three-digit thousands groups throughout the shared money formatter.
+- Display integral VND balances without `.00`, retaining up to two actual fractional digits when present.
+- Preserve configured currency symbols, symbol position and existing sign handling.
+- Add six formatting tests and audit the original amount calculation helpers.
+
+For example, `VND 10,00,00,000.00` becomes `VND 100,000,000`.
+Allocation, amount conversion, rounding and accounting functions are unchanged.
+The release includes rebuilt SPA assets and the Settings fix from rc.2.
+No new schema or migration patch is included.
+
 ## v0.1.0-rc.2
 
 Fix the Matcha Settings metadata request on Frappe v15. Python app version: `0.1.0rc2`.
