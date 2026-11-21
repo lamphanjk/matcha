@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.1.0-rc.4
+
+Use Frappe site settings for monetary display. Python app version: `0.1.0rc4`.
+
+- Read Number Format, Currency Precision and Rounding Method from System Settings during SPA boot.
+- When Currency Precision is blank, use the precision from Frappe's number format metadata.
+- Respect the configured Use Number Format from Currency option and Currency number formats.
+- Remove hardcoded VND decimal handling. All currencies use site configuration.
+- Keep original amount conversion, allocation and accounting helpers unchanged.
+
+The release includes rebuilt SPA assets and earlier Settings fixes.
+No schema or migration patch is added. Reload Matcha after changing System Settings.
+Display precision does not change the original reconciliation engine's two-decimal amount helpers.
+
 ## v0.1.0-rc.3
 
 Fix currency digit grouping. Python app version: `0.1.0rc3`.

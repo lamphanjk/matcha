@@ -1,5 +1,7 @@
 import frappe
 
+from matcha.api.formatting import get_money_format_settings
+
 
 def get_context(context):
     """
@@ -40,7 +42,7 @@ def get_boot_context():
 
     currencies = frappe.get_all(
         "Currency",
-        fields=["name", "symbol", "symbol_on_right"],
+        fields=["name", "symbol", "symbol_on_right", "number_format"],
         filters={"enabled": 1},
         ignore_permissions=False,
     )
@@ -50,5 +52,6 @@ def get_boot_context():
         "companies": companies,
         "currency_symbols": {c["name"]: (c.get("symbol") or c["name"]) for c in currencies},
         "currency_symbol_on_right": {c["name"]: c.get("symbol_on_right") for c in currencies},
+        "money_format": get_money_format_settings(currencies),
         "csrf_token": frappe.local.session.data.csrf_token,
     }

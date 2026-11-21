@@ -1,4 +1,4 @@
-# Matcha v0.1.0-rc.3: phạm vi thay đổi
+# Matcha v0.1.0-rc.4: phạm vi thay đổi
 
 Đối chiếu với commit `ba359123e3dd537ade3197b01a53390a73207bac` của bản fork.
 Đây là bản thử nghiệm, chưa xác nhận tích hợp trên site Frappe/ERPNext v15 thật.
@@ -75,9 +75,9 @@ Hai script audit so sánh với commit baseline cố định.
 Nếu clone thiếu lịch sử, fetch tag baseline trước khi chạy.
 Các unit test dùng Frappe giả lập, không thay thế kiểm thử database thật.
 
-Lần kiểm tra phát hành này có 14 unit test đạt yêu cầu.
+Lần kiểm tra phát hành này có 18 unit test Python đạt yêu cầu.
 Có thêm ba kiểm thử Desk script cho HTTP method và xử lý lỗi tải metadata trong Settings.
-Có sáu kiểm thử định dạng tiền. Tổng cộng có 23 kiểm thử đạt yêu cầu.
+Có 12 kiểm thử định dạng tiền. Tổng cộng có 33 kiểm thử đạt yêu cầu.
 Frontend build thành công bằng dependency từ `frontend/package-lock.json`, với Vite 6.4.1.
 Lockfile không thay đổi so với baseline.
 `npm audit --omit=dev` không báo lỗ hổng ở dependency production tại thời điểm kiểm tra.
@@ -104,6 +104,25 @@ Ký hiệu tiền và vị trí ký hiệu vẫn dùng cấu hình hiện có.
 Định dạng này cố định dấu phẩy hàng nghìn và dấu chấm thập phân, chưa lấy Number Format của site.
 Các hàm `roundCurrency`, `toCents`, `fromCents` và `invoiceOutstanding` giống baseline.
 Đã thêm đối chiếu AST cho bốn hàm này trong script audit frontend.
+
+## Bản rc.4 dùng định dạng tiền của site
+
+Bản này thay thế quy tắc định dạng cố định của rc.3.
+SPA boot chỉ đọc các cấu hình hiển thị từ System Settings và Currency.
+Không trả toàn bộ System Settings cho frontend.
+Number Format quyết định dấu phân cách và cách nhóm chữ số.
+Currency Precision áp dụng chung, kể cả giá trị 0.
+Nếu để trống, app lấy precision từ `frappe.utils.get_number_format_info`.
+Nếu bật Use Number Format from Currency, app dùng định dạng Currency đã cấu hình.
+Không còn nhánh riêng cho USD, VND hoặc loại tiền cụ thể nào.
+Formatter áp dụng Rounding Method cho hiển thị trên trình duyệt hỗ trợ Intl roundingMode.
+Tải lại Matcha sau khi thay đổi cấu hình hệ thống.
+
+Ví dụ, Number Format `#.###,##` và Currency Precision `2` hiển thị `VND 100.000.000,00`.
+Cùng cấu hình đó cũng hiển thị `USD 100.000.000,00`.
+Nếu cấu hình site là `#,##,###.##`, app vẫn nhóm kiểu Ấn Độ theo lựa chọn của site.
+Các helper tính toán tiền gốc vẫn làm tròn hai chữ số như baseline.
+Thay đổi số lẻ hiển thị không nâng precision của bộ máy phân bổ cũ.
 
 ## Điều kiện trước khi dùng trên production
 

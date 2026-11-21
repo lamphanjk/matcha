@@ -4,8 +4,10 @@ import './index.css';
 import App from './App';
 import { AppProvider } from './store';
 import { apiCall } from './lib/api';
+import { configureMoneyFormatting } from './lib/money-format';
 
 function mount(bootData) {
+  configureMoneyFormatting(bootData?.money_format);
   createRoot(document.getElementById('root')).render(
     <StrictMode>
       <AppProvider bootData={bootData}>

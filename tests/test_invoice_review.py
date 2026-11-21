@@ -29,10 +29,12 @@ def load_modules():
     utils = ModuleType("frappe.utils")
     utils.getdate = lambda value: value if isinstance(value, date) else date.fromisoformat(value)
     utils.nowdate = lambda: "2026-11-21"
+    utils.cint = lambda value: int(value or 0)
+    utils.get_number_format_info = lambda value: (",", ".", 2) if value == "#.###,##" else (".", ",", 2)
     loaded = []
     api_path = Path(__file__).resolve().parents[1] / "matcha" / "api"
     with patch.dict(sys.modules, {"frappe": frappe, "frappe.model": model, "frappe.utils": utils}):
-        for name in ("invoice_fields", "exceptions", "party_summary"):
+        for name in ("invoice_fields", "exceptions", "party_summary", "formatting"):
             module_name = "matcha.api." + name
             spec = importlib.util.spec_from_file_location(module_name, api_path / (name + ".py"))
             module = importlib.util.module_from_spec(spec)
@@ -42,7 +44,7 @@ def load_modules():
     return frappe, *loaded
 
 
-frappe, fields_api, exceptions_api, summary_api = load_modules()
+frappe, fields_api, exceptions_api, summary_api, formatting_api = load_modules()
 
 
 class InvoiceReviewTests(unittest.TestCase):
@@ -238,6 +240,38 @@ class InvoiceReviewTests(unittest.TestCase):
     def test_reversed_dates_rejected(self):
         with self.assertRaises(ValueError):
             exceptions_api.Exceptions("Company", "2026-11-21", "2026-01-01")
+
+
+class SiteFormattingTests(unittest.TestCase):
+    def settings(self, values, currencies=None):
+        with patch.object(frappe, "get_system_settings", side_effect=values.get, create=True):
+            return formatting_api.get_money_format_settings(currencies or [])
+
+    def test_precision_blank_uses_frappe_number_format_precision(self):
+        settings = self.settings({"number_format": "#.###,##", "currency_precision": ""})
+        self.assertEqual(settings["default"]["precision"], 2)
+        self.assertEqual(settings["default"]["decimal_separator"], ",")
+        self.assertEqual(settings["default"]["group_separator"], ".")
+
+    def test_explicit_precision_zero_is_not_replaced_by_default(self):
+        settings = self.settings({"currency_precision": "0"})
+        self.assertEqual(settings["default"]["precision"], 0)
+        self.assertEqual(settings["default"]["number_format"], "#,###.##")
+
+    def test_currency_number_format_requires_system_toggle(self):
+        currencies = [Row(name="EUR", number_format="#.###,##")]
+        settings = self.settings({"use_number_format_from_currency": 0}, currencies)
+        self.assertEqual(settings["currencies"], {})
+        settings = self.settings({"use_number_format_from_currency": 1}, currencies)
+        self.assertEqual(settings["currencies"]["EUR"]["decimal_separator"], ",")
+
+    def test_global_precision_and_rounding_apply_to_currency_overrides(self):
+        settings = self.settings({"currency_precision": "4", "rounding_method": "Commercial Rounding",
+                                  "use_number_format_from_currency": 1},
+                                 [Row(name="EUR", number_format="#.###,##")])
+        self.assertEqual(settings["default"]["precision"], 4)
+        self.assertEqual(settings["currencies"]["EUR"]["precision"], 4)
+        self.assertEqual(settings["currencies"]["EUR"]["rounding_method"], "Commercial Rounding")
 
 
 if __name__ == "__main__":

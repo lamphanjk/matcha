@@ -34,7 +34,8 @@ def audit():
     assert old["permissions"] == new["permissions"]
 
     forbidden = {"save", "insert", "submit", "cancel", "delete_doc", "set_value", "db_set", "commit", "sql"}
-    for path in ["matcha/api/exceptions.py", "matcha/api/invoice_fields.py", "matcha/api/party_summary.py"]:
+    for path in ["matcha/api/exceptions.py", "matcha/api/invoice_fields.py", "matcha/api/party_summary.py",
+                 "matcha/api/formatting.py"]:
         tree = ast.parse((ROOT / path).read_text())
         for node in ast.walk(tree):
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
