@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
 import { fmt } from '../../lib/format';
 import PaymentItem from './PaymentItem';
+import PartySummary from '../PartySummary';
 
 export default function LeftPanel() {
   const {
@@ -111,6 +112,7 @@ export default function LeftPanel() {
         </div>
       </div>
 
+      <PartySummary />
       <div className="search-wrap">
         <div className="search">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

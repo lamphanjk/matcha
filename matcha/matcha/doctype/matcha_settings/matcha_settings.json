@@ -10,7 +10,10 @@
  "engine": "InnoDB",
  "field_order": [
   "section_intercompany",
-  "intercompany_accounts"
+  "intercompany_accounts",
+  "section_invoice_fields",
+  "invoice_field_config",
+  "invoice_fields_editor"
  ],
  "fields": [
   {
@@ -24,6 +27,23 @@
    "label": "Intercompany Transfer Accounts",
    "options": "Matcha Intercompany Account",
    "description": "For each company, specify the account that acts as the intercompany bridge (e.g. 'Due from / Due to group company'). Required to reconcile a payment in one company against an invoice in another."
+  },
+  {
+   "fieldname": "section_invoice_fields",
+   "fieldtype": "Section Break",
+   "label": "Exception Invoice Fields"
+  },
+  {
+   "fieldname": "invoice_field_config",
+   "fieldtype": "Code",
+   "options": "JSON",
+   "label": "Invoice Field Configuration",
+   "hidden": 1
+  },
+  {
+   "fieldname": "invoice_fields_editor",
+   "fieldtype": "HTML",
+   "label": "Invoice Fields"
   }
  ],
  "permissions": [

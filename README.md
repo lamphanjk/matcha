@@ -123,6 +123,13 @@ bench get-app https://github.com/Negentropy-Solutions/matcha.git
 bench install-app matcha
 ```
 
+### Fork test releases
+
+This fork includes a v15 test candidate for party balances and configurable invoice fields.
+Read the [change audit](docs/release-audit.md) before testing reconciliation.
+Follow the [server test and rollback guide](docs/server-test-and-rollback.md) to switch pinned releases.
+See [CHANGELOG.md](CHANGELOG.md) for version names.
+
 ### Contributing
 
 This app uses `pre-commit` for code formatting and linting. Please [install pre-commit](https://pre-commit.com/#installation) and enable it for this repository:

@@ -8,9 +8,12 @@ export default function Nav({ excCount = 0 }) {
     currentCompany,
     currentTab,
     setCurrentTab,
-    dateFilter,
-    customFromDate,
-    customToDate,
+    dateFilter: reconcileDateFilter,
+    customFromDate: reconcileFromDate,
+    customToDate: reconcileToDate,
+    exceptionsDateFilter,
+    exceptionsFromDate,
+    exceptionsToDate,
     changeCompany,
     changeDateFilter,
     loadPayments,
@@ -19,6 +22,10 @@ export default function Nav({ excCount = 0 }) {
   } = useAppStore();
   // loadPayments is kept here for handleRefresh (manual reload — no stale-closure risk
   // since it doesn't follow a setState call)
+
+  const dateFilter = currentTab === 'Exceptions' ? exceptionsDateFilter : reconcileDateFilter;
+  const customFromDate = currentTab === 'Exceptions' ? exceptionsFromDate : reconcileFromDate;
+  const customToDate = currentTab === 'Exceptions' ? exceptionsToDate : reconcileToDate;
 
   const [companyOpen, setCompanyOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
@@ -95,7 +102,7 @@ export default function Nav({ excCount = 0 }) {
     );
   });
 
-  const showDatePill = currentTab === 'Reconcile';
+  const showDatePill = currentTab !== 'History';
   const showRefreshBtn = currentTab === 'Reconcile';
 
   return (

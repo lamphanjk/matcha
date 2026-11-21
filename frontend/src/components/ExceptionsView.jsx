@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { useAppStore } from '../store';
 import { fmt, appUrl } from '../lib/format';
+import InvoiceFilters from './InvoiceFilters';
+import ExceptionPartyFilter from './ExceptionPartyFilter';
 
 function ExceptionPaymentCard({ item, onReconcile }) {
   const { currencySymbols, currencySymbolOnRight } = useAppStore();
@@ -95,6 +97,13 @@ function ExceptionInvoiceCard({ item, onReconcile }) {
         </div>
         <div className="exc-card-id">{item.name || ''}</div>
         <div className="exc-card-party">{item.party || ''}</div>
+        <dl className="exc-invoice-fields">
+          {(item.extra_fields || []).map(field => <div key={field.fieldname}>
+            <dt>{field.label}</dt><dd>{field.value == null || field.value === '' ? '—' :
+              field.fieldtype === 'Check' ? (Number(field.value) ? 'Yes' : 'No') :
+              String(field.value)}</dd>
+          </div>)}
+        </dl>
         <div className="exc-card-meta">
           <span className={'exc-card-age ' + ageCls}>{ageStr}</span>
         </div>
@@ -105,6 +114,7 @@ function ExceptionInvoiceCard({ item, onReconcile }) {
           <button
             type="button"
             className="btn btn-sm btn-primary"
+            disabled={amount === 0}
             onClick={() => onReconcile(item)}
           >
             Reconcile
@@ -130,11 +140,9 @@ export default function ExceptionsView({ visible }) {
     exceptionsInvoices,
     exceptionsTotalPayments,
     exceptionsTotalInvoices,
-    exceptionsTotalInSystem,
     exceptionsPaymentsPage,
     exceptionsInvoicesPage,
-    exceptionsSearchPayments,
-    setExceptionsSearchPayments,
+    exceptionsParty,
     exceptionsSearchInvoices,
     setExceptionsSearchInvoices,
     exceptionsPaySummary,
@@ -145,41 +153,22 @@ export default function ExceptionsView({ visible }) {
     goToReconcileForPayment,
     goToReconcileForInvoice,
     currentCompany,
+    exceptionsInvoiceStatus,
+    exceptionsInvoiceFilters,
+    exceptionsDateFilter,
+    exceptionsFromDate,
+    exceptionsToDate,
   } = useAppStore();
 
-  const paySearchTimerRef = useRef(null);
-  const invSearchTimerRef = useRef(null);
-
-  // Load when the tab becomes visible.
-  // If App.jsx already pre-fetched on startup (data present), just mark loaded
-  // so we don't double-fetch.
-  const hasLoaded = useRef(false);
   useEffect(() => {
-    if (visible && !hasLoaded.current) {
-      hasLoaded.current = true;
-      if (!exceptionsPayments.length && !exceptionsInvoices.length && !exceptionsTotalInSystem) {
-        loadExceptions(1, 1);
-      }
-    }
-  }, [visible]); // eslint-disable-line
+    if (!visible) return;
+    const timer = setTimeout(() => loadExceptions(1, 1), 350);
+    return () => clearTimeout(timer);
+  }, [visible, currentCompany, exceptionsParty, exceptionsSearchInvoices,
+    exceptionsInvoiceStatus, exceptionsInvoiceFilters, exceptionsDateFilter,
+    exceptionsFromDate, exceptionsToDate]); // eslint-disable-line
 
-  function handlePaySearch(val) {
-    setExceptionsSearchPayments((val || '').trim());
-    if (paySearchTimerRef.current) clearTimeout(paySearchTimerRef.current);
-    paySearchTimerRef.current = setTimeout(() => {
-      paySearchTimerRef.current = null;
-      loadExceptions(1, null, 'payments');
-    }, 350);
-  }
-
-  function handleInvSearch(val) {
-    setExceptionsSearchInvoices((val || '').trim());
-    if (invSearchTimerRef.current) clearTimeout(invSearchTimerRef.current);
-    invSearchTimerRef.current = setTimeout(() => {
-      invSearchTimerRef.current = null;
-      loadExceptions(null, 1, 'invoices');
-    }, 350);
-  }
+  function handleInvSearch(value) { setExceptionsSearchInvoices(value); }
 
   const payTotalPages = Math.max(1, Math.ceil(exceptionsTotalPayments / exceptionsLimit));
   const invTotalPages = Math.max(1, Math.ceil(exceptionsTotalInvoices / exceptionsLimit));
@@ -202,7 +191,6 @@ export default function ExceptionsView({ visible }) {
       : `Showing ${invFrom}–${invTo} of ${exceptionsTotalInvoices}`;
 
   const noCompany = !currentCompany;
-  const isEmpty = !exceptionsLoading && exceptionsTotalInSystem === 0;
 
   return (
     <div className="matcha-app exceptions-view" style={visible ? {} : { display: 'none' }}>
@@ -212,7 +200,7 @@ export default function ExceptionsView({ visible }) {
             <h2 className="exceptions-title">Exceptions</h2>
             <p className="exceptions-desc">
               Unmatched payments and ageing invoices that need attention. Fix them
-              before they become a problem.
+              before they become a problem. Company and posting dates apply to both lists.
             </p>
           </div>
         </div>
@@ -232,17 +220,7 @@ export default function ExceptionsView({ visible }) {
             </div>
           )}
 
-          {!exceptionsLoading && !noCompany && isEmpty && (
-            <div className="exceptions-empty">
-              <div className="exceptions-empty-icon">✓</div>
-              <div className="exceptions-empty-title">No exceptions</div>
-              <div className="exceptions-empty-desc">
-                All clear. Unmatched payments and ageing invoices will appear here.
-              </div>
-            </div>
-          )}
-
-          {!exceptionsLoading && !noCompany && !isEmpty && (
+          {!noCompany && (
             <div className="exceptions-sections">
               <div className="exceptions-two-col">
                 {/* Payments column */}
@@ -251,17 +229,7 @@ export default function ExceptionsView({ visible }) {
                     <div className="exceptions-col-title">Unmatched payments</div>
                     <div className="exceptions-col-summary">{exceptionsPaySummary}</div>
                     <div className="exceptions-col-toolbar">
-                      <div className="search">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                        </svg>
-                        <input
-                          type="text"
-                          placeholder="Search party…"
-                          value={exceptionsSearchPayments}
-                          onChange={(e) => handlePaySearch(e.target.value)}
-                        />
-                      </div>
+                      <ExceptionPartyFilter />
                       <button
                         type="button"
                         className="btn btn-sm"
@@ -274,6 +242,7 @@ export default function ExceptionsView({ visible }) {
                   </div>
                   <div className="exceptions-col-scroll">
                     <div className="exceptions-cards">
+                      {!exceptionsPayments.length && <p className="exceptions-no-results">No payments match these filters.</p>}
                       {exceptionsPayments.map((item) => (
                         <ExceptionPaymentCard
                           key={item.name}
@@ -313,7 +282,7 @@ export default function ExceptionsView({ visible }) {
                 {/* Invoices column */}
                 <div className="exceptions-col exc-col-invoices">
                   <div className="exceptions-col-header">
-                    <div className="exceptions-col-title">Ageing invoices</div>
+                    <div className="exceptions-col-title">Invoices</div>
                     <div className="exceptions-col-summary exc-summary-inline">
                       <span className="exc-summary-line">
                         <span className="exc-badge-header exc-badge-si">SI</span>
@@ -331,7 +300,8 @@ export default function ExceptionsView({ visible }) {
                         </svg>
                         <input
                           type="text"
-                          placeholder="Search party…"
+                          aria-label="Search invoice number"
+                          placeholder="Search invoice number…"
                           value={exceptionsSearchInvoices}
                           onChange={(e) => handleInvSearch(e.target.value)}
                         />
@@ -345,12 +315,14 @@ export default function ExceptionsView({ visible }) {
                         Refresh
                       </button>
                     </div>
+                    <InvoiceFilters />
                   </div>
                   <div className="exceptions-col-scroll">
                     <div className="exceptions-cards">
+                      {!exceptionsInvoices.length && <p className="exceptions-no-results">No invoices match these filters.</p>}
                       {exceptionsInvoices.map((item) => (
                         <ExceptionInvoiceCard
-                          key={item.name}
+                          key={`${item.doctype}:${item.name}`}
                           item={item}
                           onReconcile={goToReconcileForInvoice}
                         />

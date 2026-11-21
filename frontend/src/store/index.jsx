@@ -82,11 +82,17 @@ export function AppProvider({ children, bootData }) {
   const [exceptionsTotalInSystem, setExceptionsTotalInSystem] = useState(0);
   const [exceptionsPaymentsPage, setExceptionsPaymentsPage] = useState(1);
   const [exceptionsInvoicesPage, setExceptionsInvoicesPage] = useState(1);
-  const [exceptionsSearchPayments, setExceptionsSearchPayments] = useState('');
+  const [exceptionsParty, setExceptionsParty] = useState(null);
   const [exceptionsSearchInvoices, setExceptionsSearchInvoices] = useState('');
   const [exceptionsSiSummary, setExceptionsSiSummary] = useState('');
   const [exceptionsPiSummary, setExceptionsPiSummary] = useState('');
   const [exceptionsPaySummary, setExceptionsPaySummary] = useState('');
+  const [exceptionsInvoiceStatus, setExceptionsInvoiceStatus] = useState('ageing');
+  const [exceptionsInvoiceFilters, setExceptionsInvoiceFilters] = useState([]);
+  const [exceptionsDateFilter, setExceptionsDateFilter] = useState('all');
+  const [exceptionsFromDate, setExceptionsFromDate] = useState('');
+  const [exceptionsToDate, setExceptionsToDate] = useState('');
+  const exceptionsRequestRef = useRef(0);
   const exceptionsLimit = 50;
 
   // ── Modal state ──────────────────────────────────────────────
@@ -954,6 +960,12 @@ export function AppProvider({ children, bootData }) {
 
   const changeDateFilter = useCallback(
     (value, fromDate, toDate) => {
+      if (currentTab === 'Exceptions') {
+        setExceptionsDateFilter(value || 'all');
+        setExceptionsFromDate(fromDate || '');
+        setExceptionsToDate(toDate || '');
+        return;
+      }
       setDateFilterVal(value || 'this_month');
       if (value === 'custom') {
         setCustomFromDate(fromDate || '');
@@ -968,7 +980,7 @@ export function AppProvider({ children, bootData }) {
       basePaymentsCacheRef.current = null;
       invoicesCacheRef.current = {};
     },
-    []
+    [currentTab]
   );
 
   // ── Search ────────────────────────────────────────────────────
@@ -1070,12 +1082,14 @@ export function AppProvider({ children, bootData }) {
   // ── Exceptions ────────────────────────────────────────────────
   const loadExceptions = useCallback(
     (payPage, invPage, updateOnly) => {
+      const requestId = ++exceptionsRequestRef.current;
       const pPage = payPage != null && payPage >= 1 ? payPage : exceptionsPaymentsPage;
       const iPage = invPage != null && invPage >= 1 ? invPage : exceptionsInvoicesPage;
       if (payPage != null) setExceptionsPaymentsPage(pPage);
       if (invPage != null) setExceptionsInvoicesPage(iPage);
       const company = currentCompany || companies[0]?.name || '';
       if (!company) {
+        setExceptionsLoading(false);
         setExceptionsTotalInSystem(0);
         setExceptionsPayments([]);
         setExceptionsInvoices([]);
@@ -1086,16 +1100,23 @@ export function AppProvider({ children, bootData }) {
       const offsetInv = (iPage - 1) * exceptionsLimit;
       const args = {
         company,
+        ...getDatesForFilter(exceptionsDateFilter, exceptionsFromDate, exceptionsToDate),
+        invoice_status: exceptionsInvoiceStatus,
+        invoice_filters: JSON.stringify(exceptionsInvoiceFilters),
         limit_per_type: exceptionsLimit,
         offset_payments: offsetPay,
         offset_invoices: offsetInv,
       };
-      if (exceptionsSearchPayments) args.search_payments = exceptionsSearchPayments;
+      if (exceptionsParty) {
+        args.party_type = exceptionsParty.party_type;
+        args.party = exceptionsParty.party;
+      }
       if (exceptionsSearchInvoices) args.search_invoices = exceptionsSearchInvoices;
       apiCall('matcha.api.payment_reconciliation.get_exceptions', args)
         .then((res) => {
+          if (requestId !== exceptionsRequestRef.current) return;
           setExceptionsLoading(false);
-          if (res.exc) return;
+          if (res.exc) throw new Error(parseServerMessage(res, 'Unable to load exceptions'));
           const data = res?.message || {};
           const unmatched = Array.isArray(data.unmatched_payments) ? data.unmatched_payments : [];
           const ageing = Array.isArray(data.ageing_invoices) ? data.ageing_invoices : [];
@@ -1108,13 +1129,9 @@ export function AppProvider({ children, bootData }) {
           if (!updateOnly || updateOnly === 'payments') setExceptionsPayments(unmatched);
           if (!updateOnly || updateOnly === 'invoices') setExceptionsInvoices(ageing);
 
-          const payTotal = unmatched.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
-          const payCur = unmatched[0]?.currency || '';
           setExceptionsPaySummary(`${totalPay} total`);
           const totalAgeingSi = typeof data.total_ageing_si === 'number' ? data.total_ageing_si : 0;
           const totalAgeingPi = typeof data.total_ageing_pi === 'number' ? data.total_ageing_pi : 0;
-          const totalSiAmt = typeof data.total_si_amount === 'number' ? data.total_si_amount : 0;
-          const totalPiAmt = typeof data.total_pi_amount === 'number' ? data.total_pi_amount : 0;
           setExceptionsSiSummary(`${totalAgeingSi}`);
           setExceptionsPiSummary(`${totalAgeingPi}`);
 
@@ -1122,11 +1139,20 @@ export function AppProvider({ children, bootData }) {
             prev ? { ...prev, exceptions_count: totalInSystem } : { exceptions_count: totalInSystem }
           );
         })
-        .catch(() => {
+        .catch((error) => {
+          if (requestId !== exceptionsRequestRef.current) return;
           setExceptionsLoading(false);
+          setExceptionsPayments([]);
+          setExceptionsInvoices([]);
+          setExceptionsTotalPayments(0);
+          setExceptionsTotalInvoices(0);
+          setExceptionsPaySummary('Unavailable');
+          setExceptionsSiSummary('—');
+          setExceptionsPiSummary('—');
+          toast(error.message || 'Unable to load exceptions');
         });
     },
-    [currentCompany, companies, exceptionsPaymentsPage, exceptionsInvoicesPage, exceptionsSearchPayments, exceptionsSearchInvoices, exceptionsLimit] // eslint-disable-line
+    [currentCompany, companies, exceptionsPaymentsPage, exceptionsInvoicesPage, exceptionsParty, exceptionsSearchInvoices, exceptionsLimit, exceptionsInvoiceStatus, exceptionsInvoiceFilters, exceptionsDateFilter, exceptionsFromDate, exceptionsToDate] // eslint-disable-line
   );
 
   // ── Go to reconcile for payment/invoice (from exceptions) ─────
@@ -1395,6 +1421,13 @@ export function AppProvider({ children, bootData }) {
         historyMeta,
 
         // Exceptions
+        exceptionsInvoiceStatus,
+        setExceptionsInvoiceStatus,
+        exceptionsInvoiceFilters,
+        setExceptionsInvoiceFilters,
+        exceptionsDateFilter,
+        exceptionsFromDate,
+        exceptionsToDate,
         exceptionsLoading,
         exceptionsPayments,
         exceptionsInvoices,
@@ -1405,8 +1438,8 @@ export function AppProvider({ children, bootData }) {
         setExceptionsPaymentsPage,
         exceptionsInvoicesPage,
         setExceptionsInvoicesPage,
-        exceptionsSearchPayments,
-        setExceptionsSearchPayments,
+        exceptionsParty,
+        setExceptionsParty,
         exceptionsSearchInvoices,
         setExceptionsSearchInvoices,
         exceptionsLimit,

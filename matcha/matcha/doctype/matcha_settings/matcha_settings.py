@@ -10,6 +10,13 @@ class MatchaSettings(Document):
     sensible defaults so it can evolve without impacting core flows.
     """
 
+    def validate(self):
+        if not self.is_new() and not self.has_value_changed("invoice_field_config"):
+            return
+        from matcha.api.invoice_fields import validate_configuration
+
+        validate_configuration(self.get("invoice_field_config"))
+
     @staticmethod
     def get_settings():
         """Return the singleton Matcha Settings document."""
