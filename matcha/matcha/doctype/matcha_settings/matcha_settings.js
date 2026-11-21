@@ -1,6 +1,10 @@
 frappe.ui.form.on('Matcha Settings', {
 	refresh(frm) {
-		render_invoice_fields(frm);
+		return render_invoice_fields(frm).catch(() => {
+            const wrapper = frm.fields_dict.invoice_fields_editor.$wrapper;
+            wrapper.empty();
+            $('<p class="text-danger">').text(__('Unable to load invoice field settings. Refresh the form and try again.')).appendTo(wrapper);
+        });
 	},
 	onload(frm) {
 		frm.set_query('intercompany_account', 'intercompany_accounts', (doc, cdt, cdn) => {
@@ -35,7 +39,17 @@ async function render_invoice_fields(frm) {
             $('<p>').text(__('No read permission')).appendTo(section);
             continue;
         }
-        const response = await frappe.call({method: 'matcha.api.invoice_fields.get_invoice_fields', args: {doctype}});
+        let response;
+        try {
+            response = await frappe.call({
+                method: 'matcha.api.invoice_fields.get_invoice_fields',
+                type: 'GET',
+                args: {doctype},
+            });
+        } catch (error) {
+            $('<p class="text-danger">').text(__('Unable to load fields for this invoice type. Check read permission and refresh the form.')).appendTo(section);
+            continue;
+        }
         const fields = response.message || [];
         const valid = new Set(fields.map(field => field.fieldname));
         for (const key of ['display', 'filter']) {

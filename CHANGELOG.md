@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.0-rc.2
+
+Fix the Matcha Settings metadata request on Frappe v15. Python app version: `0.1.0rc2`.
+
+- Send GET explicitly when loading invoice fields from Desk. Frappe defaults to POST, which the GET-only API rejects.
+- Handle failed metadata requests within each invoice section and catch form refresh errors.
+- Preserve saved field choices when a metadata request fails.
+- Add three Desk script tests for the request method and failure handling.
+
+No API permission expansion, schema change, accounting change or new migration patch is included.
+Existing rc.1 installations need the new code, cache clearing, service restart and browser reload.
+Missing assets from Frappe or other apps require a separate diagnosis.
+
 ## v0.1.0-rc.1
 
 Test candidate for Frappe/ERPNext v15. Python app version: `0.1.0rc1`.

@@ -16,7 +16,7 @@ Các lệnh server chạy bằng tài khoản quản lý bench.
 |---|---|
 | Repo | `https://github.com/lamphanjk/matcha` |
 | Bản gốc | Tag `v0.0.1-baseline`, commit `ba359123e3dd537ade3197b01a53390a73207bac` |
-| Bản test | Tag `v0.1.0-rc.1`, app version `0.1.0rc1` |
+| Bản test | Tag `v0.1.0-rc.2`, app version `0.1.0rc2` |
 | Nhánh phát triển | `codex/party-balances-v15`. Chưa cần merge vào `main` |
 | Server test | Bench riêng, cùng phiên bản Frappe/ERPNext và các custom app với production |
 | Database test | Bản sao có thể phục hồi, không dùng database production để thử reconcile |
@@ -33,6 +33,32 @@ Tắt scheduler, email và tích hợp gửi dữ liệu thật trên bản sao 
 Nếu commit trên server khác baseline, dùng commit đã ghi từ server làm mốc rollback.
 Không đổi hoặc ghi đè tag cũ đã phát hành.
 
+## Cập nhật riêng từ rc.1 lên rc.2
+
+Bản rc.2 sửa lỗi HTTP method khi mở Matcha Settings.
+Nếu site đã migrate thành công ở rc.1, bản vá này không có thay đổi schema hoặc patch mới.
+Không cần chạy migrate chỉ để sửa lỗi GET/POST này.
+
+Từ thư mục bench, đặt `TEST_SITE` thành tên site thật rồi chạy từng lệnh:
+
+```bash
+bench --site "$TEST_SITE" set-maintenance-mode on
+git -C apps/matcha status --short
+git -C apps/matcha fetch matcha-fork refs/tags/v0.1.0-rc.2:refs/tags/v0.1.0-rc.2
+git -C apps/matcha switch --detach v0.1.0-rc.2
+bench --site "$TEST_SITE" clear-cache
+bench --site "$TEST_SITE" clear-website-cache
+bench restart
+bench --site "$TEST_SITE" set-maintenance-mode off
+```
+
+Nếu working tree có thay đổi khác ngoài lockfile đã biết, dừng trước khi switch.
+Nếu lệnh lỗi, giữ maintenance mode và kiểm tra lỗi trước khi mở site.
+Tải lại trình duyệt rồi mở Matcha Settings.
+Trong Network, request `get_invoice_fields` phải dùng GET.
+Nếu GET vẫn trả 403 từ hàm đọc Invoice, kiểm tra quyền đọc theo user.
+Bản vá không xử lý asset 404 của Frappe hoặc app khác.
+
 ## 4. Các bước
 
 ### Bước 1 — Đẩy nhánh và tag lên Git
@@ -45,13 +71,13 @@ git status --short
 git log -1 --oneline
 git tag --list
 git show v0.0.1-baseline --no-patch
-git show v0.1.0-rc.1 --no-patch
+git show v0.1.0-rc.2 --no-patch
 ```
 
 Sau khi commit và hai tag đã được tạo, đẩy đúng ba ref này:
 
 ```bash
-git push --atomic --set-upstream origin codex/party-balances-v15 refs/tags/v0.0.1-baseline refs/tags/v0.1.0-rc.1
+git push --atomic --set-upstream origin codex/party-balances-v15 refs/tags/v0.0.1-baseline refs/tags/v0.1.0-rc.2
 ```
 
 Lệnh không cập nhật `main` và không force-push.
@@ -83,7 +109,7 @@ Giữ nguyên commit Frappe/ERPNext trong suốt bài test hai phiên bản.
 ```bash
 bench --site "$TEST_SITE" set-maintenance-mode on
 git -C apps/matcha fetch origin --tags
-git -C apps/matcha switch --detach v0.1.0-rc.1
+git -C apps/matcha switch --detach v0.1.0-rc.2
 git -C apps/matcha describe --tags --exact-match
 ```
 
@@ -147,7 +173,7 @@ Xác nhận cách rollback này trên bench test trước khi dùng ở nơi kh�
 
 ### Bước 6 — Chuyển lại bản test
 
-Lặp Bước 3 với `v0.1.0-rc.1`.
+Lặp Bước 3 với `v0.1.0-rc.2`.
 Kiểm tra Matcha Settings, các thao tác đối soát và lịch sử sau lần chuyển.
 Nếu bản cũ đã lưu lại Settings, kiểm tra lựa chọn field có còn hay cần cấu hình lại.
 

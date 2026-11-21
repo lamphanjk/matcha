@@ -1,4 +1,4 @@
-# Matcha v0.1.0-rc.1: phạm vi thay đổi
+# Matcha v0.1.0-rc.2: phạm vi thay đổi
 
 Đối chiếu với commit `ba359123e3dd537ade3197b01a53390a73207bac` của bản fork.
 Đây là bản thử nghiệm, chưa xác nhận tích hợp trên site Frappe/ERPNext v15 thật.
@@ -67,6 +67,7 @@ Chạy từ thư mục app với Python từ 3.10 và dependency frontend đã c
 python3 scripts/audit_release.py
 node scripts/audit_reconciliation.mjs
 python3 -m unittest discover -s tests -v
+node --test tests/test_settings_requests.mjs
 ```
 
 Hai script audit so sánh với commit baseline cố định.
@@ -74,12 +75,22 @@ Nếu clone thiếu lịch sử, fetch tag baseline trước khi chạy.
 Các unit test dùng Frappe giả lập, không thay thế kiểm thử database thật.
 
 Lần kiểm tra phát hành này có 14 unit test đạt yêu cầu.
+Có thêm ba kiểm thử Desk script cho HTTP method và xử lý lỗi tải metadata trong Settings.
 Frontend build thành công bằng dependency từ `frontend/package-lock.json`, với Vite 6.4.1.
 Lockfile không thay đổi so với baseline.
 `npm audit --omit=dev` không báo lỗ hổng ở dependency production tại thời điểm kiểm tra.
 Audit toàn bộ dependency báo 12 cảnh báo ở nhóm phát triển/build.
 Nhóm này chưa được nâng phiên bản trong đợt cập nhật để giữ phạm vi thay đổi.
 Không dùng Vite dev server làm server production.
+
+## Bản vá rc.2 cho Matcha Settings
+
+Traceback production chỉ ra lỗi tại bước `is_valid_http_method`, trước khi chạy hàm đọc metadata.
+`frappe.call` mặc định gửi POST, trong khi `get_invoice_fields` chỉ cho phép GET.
+Đã thêm `type: 'GET'` ở lời gọi Settings và giữ nguyên whitelist GET phía server.
+Đã xử lý rejection của từng loại Invoice và lỗi khi refresh form.
+Không thay đổi quyền đọc, schema, hoặc hàm xử lý chứng từ trong bản vá này.
+Các unit test dùng mô phỏng request contract v15, chưa thay thế kiểm tra lại trên server production.
 
 ## Điều kiện trước khi dùng trên production
 
